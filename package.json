@@ -16,6 +16,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.14",
     "@rsbuild/core": "^2.2.8",
     "@rsbuild/plugin-react": "^2.1.0",
     "@tanstack/router-plugin": "^1.168.40",
