@@ -1,11 +1,12 @@
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import {tanstackRouter} from '@tanstack/router-plugin/rspack';
+import { pluginTailwindcss } from '@rsbuild/plugin-tailwindcss';
 
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
-  plugins: [pluginReact()],
+  plugins: [pluginReact(), pluginTailwindcss()],
   clearScreen: false,
   server: {
     port: 1420,
@@ -26,6 +27,9 @@ export default defineConfig({
             tanstackRouter({
                 target: "react",
                 autoCodeSplitting: true,
+                routesDirectory: "./src/routes",
+                generatedRouteTree: "./src/routeTree.gen.ts",
+                routeFileIgnorePrefix: "-"
             })
         ]
     }

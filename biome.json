@@ -6,7 +6,13 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"include": [
+			"src",
+			"!node_modules",
+			"!src-tauri",
+			"!src/components/ui/**"
+		]
 	},
 	"formatter": {
 		"enabled": true,
