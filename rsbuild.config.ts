@@ -1,11 +1,18 @@
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
-import {tanstackRouter} from '@tanstack/router-plugin/rspack';
+import { tanstackRouter } from '@tanstack/router-plugin/rspack';
 import { pluginTailwindcss } from '@rsbuild/plugin-tailwindcss';
 
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
+  source: {
+    // This project follows the Vite convention (`main.tsx`), while Rsbuild
+    // defaults to looking for `src/index.tsx`.
+    entry: {
+      index: './src/main.tsx',
+    },
+  },
   plugins: [pluginReact(), pluginTailwindcss()],
   clearScreen: false,
   server: {
@@ -22,16 +29,21 @@ export default defineConfig({
     }
   },
   tools: {
+    // Some systems impose a low native file-watcher limit. Polling keeps the
+    // development server reliable in those environments.
     rspack: {
-        plugins: [
-            tanstackRouter({
-                target: "react",
-                autoCodeSplitting: true,
-                routesDirectory: "./src/routes",
-                generatedRouteTree: "./src/routeTree.gen.ts",
-                routeFileIgnorePrefix: "-"
-            })
-        ]
-    }
-  }
+      plugins: [
+        tanstackRouter({
+          target: 'react',
+          autoCodeSplitting: true,
+          routesDirectory: './src/routes',
+          generatedRouteTree: './src/routeTree.gen.ts',
+          routeFileIgnorePrefix: '-',
+        }),
+      ],
+      watchOptions: {
+        poll: 1000,
+      },
+    },
+  },
 });
