@@ -27,10 +27,18 @@ pub fn run() {
             let setting = theme::load_theme(app.handle());
             app.manage(ThemeState::new(setting));
 
-            let window = app
-                .get_webview_window("main")
-                .expect("main window not found");
-            theme::apply_theme(&window, setting);
+            // ウィンドウを tauri.conf.json ではなくここで生成する。
+            // 設定の読み込み後に作ることで、最初の描画からテーマが確定する。
+            let window = tauri::WebviewWindowBuilder::new(
+                app,
+                "main",
+                tauri::WebviewUrl::default(),
+            )
+            .title("sample-tauri-app")
+            .inner_size(800.0, 600.0)
+            .theme(setting.to_window_theme())
+            .initialization_script(theme::initialization_script(setting))
+            .build()?;
             theme::handle_theme_changed(&window);
             Ok(())
         })

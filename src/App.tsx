@@ -3,11 +3,11 @@ import ThemeToggle from "./components/features/theme/toggle";
 import useTheme from "@/hooks/theme/useTheme";
 
 function App() {
+  const setTheme = useTheme();
 
-  useTheme(); 
   return (
     <main className="bg-background text-foreground">
-      <ThemeToggle />
+      <ThemeToggle onSelect={setTheme} />
     </main>
   );
 }

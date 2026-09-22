@@ -24,7 +24,7 @@ impl Default for ThemeSetting {
 
 impl ThemeSetting {
     /// System は「ウィンドウのテーマを固定しない」を意味するため None を返す。
-    fn to_window_theme(self) -> Option<tauri::Theme> {
+    pub fn to_window_theme(self) -> Option<tauri::Theme> {
         match self {
             ThemeSetting::System => None,
             ThemeSetting::Light => Some(tauri::Theme::Light),
@@ -77,10 +77,35 @@ impl ThemeState {
     }
 }
 
+/// 初回描画前に <html> へクラスを付けるスクリプト。React の初期化を待つと
+/// 一瞬だけ既定のライトテーマが見えるため、ウィンドウ生成時に注入する。
+/// System のときだけ OS 値の問い合わせが要る。明示指定は設定値がそのまま答え。
+pub fn initialization_script(setting: ThemeSetting) -> String {
+    let setting = match setting {
+        ThemeSetting::System => "system",
+        ThemeSetting::Light => "light",
+        ThemeSetting::Dark => "dark",
+    };
+    format!(
+        r#"(() => {{
+  const setting = "{setting}";
+  const resolved = setting === "system"
+    ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+    : setting;
+  document.documentElement.classList.add(resolved);
+}})();"#
+    )
+}
+
 /// 設定をウィンドウへ反映し、実際に適用されたテーマを返す。
 pub fn apply_theme(window: &tauri::WebviewWindow, setting: ThemeSetting) -> ResolvedTheme {
     let _ = window.set_theme(setting.to_window_theme());
-    resolved_theme(window)
+    match setting {
+        // 明示指定は set_theme が確定させるため、ウィンドウへの問い合わせを待たずに導出する。
+        ThemeSetting::Light => ResolvedTheme::Light,
+        ThemeSetting::Dark => ResolvedTheme::Dark,
+        ThemeSetting::System => resolved_theme(window),
+    }
 }
 
 fn resolved_theme(window: &tauri::WebviewWindow) -> ResolvedTheme {
@@ -97,7 +122,6 @@ pub fn set_theme(
     state.set(setting);
     let resolved = apply_theme(&window, setting);
     save_theme(window.app_handle(), setting);
-    let _ = ThemeChanged(resolved).emit(&window);
     resolved
 }
 
@@ -133,7 +157,7 @@ pub fn load_theme(app: &tauri::AppHandle) -> ThemeSetting {
 }
 
 /// OS のテーマ変更を監視する。System のときだけフロントへ通知する。
-/// 明示指定中は set_theme で固定済みなのでこのイベントは発火しない。
+/// 明示指定中の反映は set_theme の戻り値が担うため、ここからは通知しない。
 pub fn handle_theme_changed(window: &tauri::WebviewWindow) {
     let emitter = window.clone();
     window.on_window_event(move |event| {

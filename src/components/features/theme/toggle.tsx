@@ -1,9 +1,22 @@
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { setTheme } from "@tauri-apps/api/app";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { ThemeSetting } from "@/bindings";
+import { useThemeSetting } from "@/hooks/theme/useTheme";
 import { Monitor, Moon, Sun } from "lucide-react";
 
-export default function ThemeToggle() {
+type Props = {
+    onSelect: (setting: ThemeSetting) => void;
+};
+
+export default function ThemeToggle({ onSelect }: Props) {
+    const setting = useThemeSetting();
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger
@@ -16,18 +29,23 @@ export default function ThemeToggle() {
                 }
             />
             <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setTheme("light")}>
-                    <Sun />
-                    Light
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme("dark")}>
-                    <Moon />
-                    Dark
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme(null)}>
-                    <Monitor />
-                    System
-                </DropdownMenuItem>
+                <DropdownMenuRadioGroup
+                    value={setting}
+                    onValueChange={(value) => onSelect(value as ThemeSetting)}
+                >
+                    <DropdownMenuRadioItem value="light">
+                        <Sun />
+                        Light
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="dark">
+                        <Moon />
+                        Dark
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="system">
+                        <Monitor />
+                        System
+                    </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
             </DropdownMenuContent>
         </DropdownMenu>
     );
