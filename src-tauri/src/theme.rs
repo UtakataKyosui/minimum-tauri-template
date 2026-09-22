@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 use tauri_plugin_store::StoreExt;
+use tauri_specta::Event;
 
 const STORE_FILE: &str = "settings.json";
 const STORE_KEY: &str = "theme";
-pub const THEME_CHANGED_EVENT: &str = "theme-changed";
 
 /// `tauri::Theme` に System が無いため、OS 追従を表現するための独自設定値。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
@@ -33,6 +33,34 @@ impl ThemeSetting {
     }
 }
 
+/// `tauri::Theme` は specta::Type を実装せず non_exhaustive でもあるため、
+/// フロントへ渡す解決済みテーマはこの型に写して扱う。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ResolvedTheme {
+    Light,
+    Dark,
+}
+
+impl From<tauri::Theme> for ResolvedTheme {
+    fn from(theme: tauri::Theme) -> Self {
+        match theme {
+            tauri::Theme::Dark => ResolvedTheme::Dark,
+            _ => ResolvedTheme::Light,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ThemeStatus {
+    pub setting: ThemeSetting,
+    pub resolved: ResolvedTheme,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type, Event)]
+pub struct ThemeChanged(pub ResolvedTheme);
+
 pub struct ThemeState(pub Mutex<ThemeSetting>);
 
 impl ThemeState {
@@ -50,9 +78,13 @@ impl ThemeState {
 }
 
 /// 設定をウィンドウへ反映し、実際に適用されたテーマを返す。
-pub fn apply_theme(window: &tauri::WebviewWindow, setting: ThemeSetting) -> tauri::Theme {
+pub fn apply_theme(window: &tauri::WebviewWindow, setting: ThemeSetting) -> ResolvedTheme {
     let _ = window.set_theme(setting.to_window_theme());
-    window.theme().unwrap_or(tauri::Theme::Light)
+    resolved_theme(window)
+}
+
+fn resolved_theme(window: &tauri::WebviewWindow) -> ResolvedTheme {
+    window.theme().unwrap_or(tauri::Theme::Light).into()
 }
 
 #[tauri::command]
@@ -61,32 +93,23 @@ pub fn set_theme(
     setting: ThemeSetting,
     window: tauri::WebviewWindow,
     state: tauri::State<ThemeState>,
-) -> tauri::Theme {
+) -> ResolvedTheme {
     state.set(setting);
     let resolved = apply_theme(&window, setting);
     save_theme(window.app_handle(), setting);
-    let _ = window.emit(THEME_CHANGED_EVENT, resolved);
+    let _ = ThemeChanged(resolved).emit(&window);
     resolved
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn get_theme(state: tauri::State<ThemeState>) -> ThemeSetting {
-    state.get()
 }
 
 /// 設定値と、それを解決した実際のテーマの両方を返す。
 /// System のとき、フロントは起動直後の解決値をこれで知る。
 #[tauri::command]
 #[specta::specta]
-pub fn get_resolved_theme(
-    window: tauri::WebviewWindow,
-    state: tauri::State<ThemeState>,
-) -> (ThemeSetting, tauri::Theme) {
-    (
-        state.get(),
-        window.theme().unwrap_or(tauri::Theme::Light),
-    )
+pub fn get_theme(window: tauri::WebviewWindow, state: tauri::State<ThemeState>) -> ThemeStatus {
+    ThemeStatus {
+        setting: state.get(),
+        resolved: resolved_theme(&window),
+    }
 }
 
 pub fn save_theme(app: &tauri::AppHandle, setting: ThemeSetting) {
@@ -117,7 +140,7 @@ pub fn handle_theme_changed(window: &tauri::WebviewWindow) {
         if let tauri::WindowEvent::ThemeChanged(theme) = event {
             if let Some(state) = emitter.try_state::<ThemeState>() {
                 if state.get() == ThemeSetting::System {
-                    let _ = emitter.emit(THEME_CHANGED_EVENT, *theme);
+                    let _ = ThemeChanged(ResolvedTheme::from(*theme)).emit(&emitter);
                 }
             }
         }
