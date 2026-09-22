@@ -10,20 +10,28 @@ import type { ThemeSetting } from "@/bindings";
 import { useThemeSetting } from "@/hooks/theme/useTheme";
 import { Monitor, Moon, Sun } from "lucide-react";
 
+const ICONS = {
+    system: Monitor,
+    light: Sun,
+    dark: Moon,
+} as const;
+
 type Props = {
     onSelect: (setting: ThemeSetting) => void;
 };
 
 export default function ThemeToggle({ onSelect }: Props) {
     const setting = useThemeSetting();
+    // 解決済みテーマではなく設定値で選ぶ。dark: バリアントは light/dark しか
+    // 区別できず、System を表せない。
+    const Icon = ICONS[setting];
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger
                 render={
-                    <Button variant="outline" size="icon" className="relative">
-                        <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-                        <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+                    <Button variant="outline" size="icon">
+                        <Icon className="h-[1.2rem] w-[1.2rem]" />
                         <span className="sr-only">Toggle theme</span>
                     </Button>
                 }
