@@ -5,15 +5,9 @@ use tauri_specta::{collect_commands, collect_events, Builder};
 use theme::{ThemeChanged, ThemeState};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-#[specta::specta]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
-        .commands(collect_commands![greet, theme::set_theme, theme::get_theme,])
+        .commands(collect_commands![theme::set_theme, theme::get_theme,])
         .events(collect_events![ThemeChanged])
 }
 
