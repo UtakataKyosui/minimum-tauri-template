@@ -11,6 +11,7 @@ let currentSetting: ThemeSetting = "system";
 // このフラグが立った後は起動時の取得結果を適用しない。
 let settingOverridden = false;
 const listeners = new Set<() => void>();
+let queuedThemeChange: Promise<void> = Promise.resolve();
 
 function subscribe(listener: () => void) {
     listeners.add(listener);
@@ -37,15 +38,20 @@ function applyResolved() {
     root.classList.add(darkQuery.matches ? "dark" : "light");
 }
 
-async function setTheme(next: ThemeSetting) {
+function setTheme(next: ThemeSetting): Promise<void> {
     // await の前にフラグを立てる。await 中に起動時の getTheme() が
     // 解決してもユーザーの選択を上書きさせないため。
     settingOverridden = true;
     // 保存とウィンドウ外観の指定は Rust が担う。解決済みテーマは
     // 反映後に darkQuery から読む。
-    await commands.setTheme(next);
-    setSetting(next);
-    applyResolved();
+    // 選択順に Rust へ送る。先の呼び出しが失敗しても次の選択は実行する。
+    const change = queuedThemeChange.catch(() => {}).then(async () => {
+        await commands.setTheme(next);
+        setSetting(next);
+        applyResolved();
+    });
+    queuedThemeChange = change;
+    return change;
 }
 
 /** ドロップダウンのチェックマーク用。購読したコンポーネントだけが再レンダリングされる。 */

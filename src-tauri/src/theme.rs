@@ -67,7 +67,18 @@ pub fn initialization_script(setting: ThemeSetting) -> String {
   const resolved = setting === "system"
     ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
     : setting;
-  document.documentElement.classList.add(resolved);
+  const apply = () => {{
+    const root = document.documentElement;
+    if (!root) return false;
+    root.classList.add(resolved);
+    return true;
+  }};
+  if (!apply()) {{
+    const observer = new MutationObserver(() => {{
+      if (apply()) observer.disconnect();
+    }});
+    observer.observe(document, {{ childList: true }});
+  }}
 }})();"#
     )
 }
