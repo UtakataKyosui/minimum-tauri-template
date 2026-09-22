@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/rspack';
@@ -14,6 +15,11 @@ export default defineConfig({
     },
   },
   plugins: [pluginReact(), pluginTailwindcss()],
+  resolve: {
+    alias: {
+      '@': path.resolve(process.cwd(), './src'),
+    },
+  },
   clearScreen: false,
   server: {
     port: 1420,
